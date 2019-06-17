@@ -6,10 +6,11 @@ import tensorflow as tf
 from tensorflow.contrib.layers.python.layers import regularizers
 
 from niftynet.network.unet import UNet3D
+from tests.niftynet_testcase import NiftyNetTestCase
 
 
 @unittest.skip('Test currently disabled')
-class UNet3DTest(tf.test.TestCase):
+class UNet3DTest(NiftyNetTestCase):
     def test_3d_shape(self):
         input_shape = (2, 96, 96, 96, 1)
         x = tf.ones(input_shape)
@@ -18,7 +19,7 @@ class UNet3DTest(tf.test.TestCase):
         out = unet_instance(x, is_training=True)
         print(unet_instance.num_trainable_params())
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out = sess.run(out)
             self.assertAllClose((2, 8, 8, 8, 160), out.shape)
@@ -31,7 +32,7 @@ class UNet3DTest(tf.test.TestCase):
         out = unet_instance(x, is_training=True)
         print(unet_instance.num_trainable_params())
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out = sess.run(out)
             self.assertAllClose((2, 8, 8, 160), out.shape)
@@ -45,7 +46,7 @@ class UNet3DTest(tf.test.TestCase):
         out = unet_instance(x, is_training=True)
         print(unet_instance.num_trainable_params())
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out = sess.run(out)
             self.assertAllClose((2, 8, 8, 8, 160), out.shape)
@@ -59,7 +60,7 @@ class UNet3DTest(tf.test.TestCase):
         out = unet_instance(x, is_training=True)
         print(unet_instance.num_trainable_params())
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out = sess.run(out)
             self.assertAllClose((2, 8, 8, 160), out.shape)

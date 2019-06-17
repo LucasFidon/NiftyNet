@@ -7,7 +7,12 @@ import tensorflow as tf
 from niftynet.layer.subpixel import SubPixelLayer
 from tests.niftynet_testcase import NiftyNetTestCase
 
+<<<<<<< HEAD
 class SubPixelTest(NiftyNetTestCase):
+=======
+
+class SubPixelTest(tf.test.TestCase):
+>>>>>>> dev
     """
     Test for niftynet.layer.subpixel.SubPixelLayer.
     Mostly adapted from convolution_test.py

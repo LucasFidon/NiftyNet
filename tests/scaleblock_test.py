@@ -7,10 +7,11 @@ import tensorflow as tf
 from tensorflow.contrib.layers.python.layers import regularizers
 
 from niftynet.network.scalenet import ScaleBlock
+from tests.niftynet_testcase import NiftyNetTestCase
 
 
 @unittest.skipIf(os.environ.get('QUICKTEST', "").lower() == "true", 'Skipping slow tests')
-class ScaleBlockTest(tf.test.TestCase):
+class ScaleBlockTest(NiftyNetTestCase):
     def get_2d_input(self):
         input_shape = (2, 32, 32, 4)
         x = tf.ones(input_shape)
@@ -39,7 +40,7 @@ class ScaleBlockTest(tf.test.TestCase):
         out_2 = scalenet_layer(x, is_training=True)
         print(scalenet_layer)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out_1 = sess.run(out_1)
             out_2 = sess.run(out_2)
@@ -59,7 +60,7 @@ class ScaleBlockTest(tf.test.TestCase):
         out_2 = scalenet_layer(x, is_training=True)
         print(scalenet_layer)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out_1 = sess.run(out_1)
             out_2 = sess.run(out_2)
@@ -76,7 +77,7 @@ class ScaleBlockTest(tf.test.TestCase):
         out_2 = scalenet_layer(x, is_training=True)
         print(scalenet_layer)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out_1 = sess.run(out_1)
             out_2 = sess.run(out_2)
@@ -96,7 +97,7 @@ class ScaleBlockTest(tf.test.TestCase):
         out_2 = scalenet_layer(x, is_training=True)
         print(scalenet_layer)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out_1 = sess.run(out_1)
             out_2 = sess.run(out_2)

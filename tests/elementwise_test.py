@@ -2,9 +2,10 @@ from __future__ import absolute_import, print_function
 import tensorflow as tf
 
 from niftynet.layer.elementwise import ElementwiseLayer
+from tests.niftynet_testcase import NiftyNetTestCase
 
 
-class ElementwiseTest(tf.test.TestCase):
+class ElementwiseTest(NiftyNetTestCase):
     def test_3d_shape(self):
         input_shape = (2, 16, 16, 16, 6)
         x_1 = tf.ones(input_shape)
@@ -34,7 +35,7 @@ class ElementwiseTest(tf.test.TestCase):
         sum_layer = ElementwiseLayer('CONCAT')
         out_sum_4 = sum_layer(x_1, x_2)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out = sess.run(out_sum_1)
             self.assertAllClose((2, 16, 16, 16, 6), out.shape)
@@ -74,7 +75,7 @@ class ElementwiseTest(tf.test.TestCase):
         sum_layer = ElementwiseLayer('CONCAT')
         out_sum_4 = sum_layer(x_1, x_2)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out = sess.run(out_sum_1)
             self.assertAllClose((2, 16, 16, 6), out.shape)

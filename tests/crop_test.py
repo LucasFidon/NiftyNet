@@ -2,9 +2,10 @@ from __future__ import absolute_import, print_function
 
 import tensorflow as tf
 from niftynet.layer.crop import CropLayer
+from tests.niftynet_testcase import NiftyNetTestCase
 
 
-class CropTest(tf.test.TestCase):
+class CropTest(NiftyNetTestCase):
     def test_3d_shape(self):
         input_shape = (2, 16, 16, 16, 8)
         test_border = 3
@@ -22,7 +23,7 @@ class CropTest(tf.test.TestCase):
         out_crop_1 = crop_layer(x)
         print(crop_layer)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             out = sess.run(out_crop)
             out_1 = sess.run(out_crop_1)
             self.assertAllClose((2, 10, 10, 10, 8), out.shape)
@@ -45,7 +46,7 @@ class CropTest(tf.test.TestCase):
         out_crop_1 = crop_layer(x)
         print(crop_layer)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             out = sess.run(out_crop)
             out_1 = sess.run(out_crop_1)
             self.assertAllClose((2, 10, 10, 8), out.shape)

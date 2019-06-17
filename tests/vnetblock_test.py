@@ -4,9 +4,10 @@ import tensorflow as tf
 from tensorflow.contrib.layers.python.layers import regularizers
 
 from niftynet.network.vnet import VNetBlock
+from tests.niftynet_testcase import NiftyNetTestCase
 
 
-class VNetBlockTest(tf.test.TestCase):
+class VNetBlockTest(NiftyNetTestCase):
     def get_2d_data(self):
         input_shape = (2, 16, 16, 8)
         x = tf.ones(input_shape)
@@ -31,7 +32,7 @@ class VNetBlockTest(tf.test.TestCase):
         out_5, out_6 = vnet_block_op(x, x)
         print(vnet_block_op)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out_1 = sess.run(out_1)
             self.assertAllClose((2, 16, 16, 16, 16), out_1.shape)
@@ -60,7 +61,7 @@ class VNetBlockTest(tf.test.TestCase):
         out_5, out_6 = vnet_block_op(x, x)
         print(vnet_block_op)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out_1 = sess.run(out_1)
             self.assertAllClose((2, 16, 16, 16), out_1.shape)
@@ -95,7 +96,7 @@ class VNetBlockTest(tf.test.TestCase):
         out_5, out_6 = vnet_block_op(x, x)
         print(vnet_block_op)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out_1 = sess.run(out_1)
             self.assertAllClose((2, 16, 16, 16, 16), out_1.shape)
@@ -130,7 +131,7 @@ class VNetBlockTest(tf.test.TestCase):
         out_5, out_6 = vnet_block_op(x, x)
         print(vnet_block_op)
 
-        with self.test_session() as sess:
+        with self.cached_session() as sess:
             sess.run(tf.global_variables_initializer())
             out_1 = sess.run(out_1)
             self.assertAllClose((2, 16, 16, 16), out_1.shape)
