@@ -12,9 +12,6 @@ DATASET_PATH_IMAGE = '/home/lucasf/data/fetalMR_Guotai/image'
 SAVE_PATH_LABEL = '/home/lucasf/data/fetalMR_Guotai/label_slices'
 SAVE_PATH_IMAGE = '/home/lucasf/data/fetalMR_Guotai/image_slices'
 
-# SAVE_PATH_LABEL = '/home/lucasf/data/fetalMR_Guotai/label_slices_more_than_1_label'
-# SAVE_PATH_IMAGE = '/home/lucasf/data/fetalMR_Guotai/image_slices_more_than_1_label'
-
 DATA_SPLIT = {'validation': 0.1, 'inference': 0.2}
 assert DATA_SPLIT['validation'] + DATA_SPLIT['inference'] < 1.
 DATA_SPLIT['training'] = 1. - DATA_SPLIT['validation'] - DATA_SPLIT['inference']
@@ -68,6 +65,7 @@ if __name__ == '__main__':
     image_dict = {}  # slice id -> slice image path
     label_dict = {}  # slice id -> slice label path
     data_split_dict = {}  # slice id -> partition (validation, training or inference)
+    # we keep track of the slices with more than 1 label in case we want to use only them for training
     more_than_1_label = []  # list of slice id with more than 1 label (i.e. not just background)
 
     # prepare the partition of the patient into validation - training - inference
