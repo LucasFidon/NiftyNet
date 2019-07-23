@@ -10,11 +10,19 @@ import tensorflow as tf
 from niftynet.engine.application_factory import LossSegmentationFactory
 from niftynet.layer.base_layer import Layer
 
-M_tree = np.array([[0., 1., 1., 1., 1.],
-                   [1., 0., 0.6, 0.2, 0.5],
-                   [1., 0.6, 0., 0.6, 0.7],
-                   [1., 0.2, 0.6, 0., 0.5],
-                   [1., 0.5, 0.7, 0.5, 0.]], dtype=np.float64)
+# M_tree = np.array([[0., 1., 1., 1., 1.],
+#                    [1., 0., 0.6, 0.2, 0.5],
+#                    [1., 0.6, 0., 0.6, 0.7],
+#                    [1., 0.2, 0.6, 0., 0.5],
+#                    [1., 0.5, 0.7, 0.5, 0.]], dtype=np.float64)
+
+# update of the Tree labels distances for BraTS after they removed the non-enhancing core label (l=3)
+# We also simplified the weights of the tree (they are all taken equal to 0.2 now)
+# we have in order: background (l=0), necrotic core (l=1), edema (l=2), enhancing core (l=4)
+M_tree = np.array([[0.0, 1.0, 1.0, 1.0],
+                   [1.0, 0.0, 0.6, 0.4],
+                   [1.0, 0.6, 0.0, 0.6],
+                   [1.0, 0.4, 0.6, 0.0]], dtype=np.float64)
 
 
 class LossFunction(Layer):
