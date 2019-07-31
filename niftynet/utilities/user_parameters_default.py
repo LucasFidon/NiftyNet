@@ -70,6 +70,12 @@ def add_application_args(parser):
         default=DEFAULT_DATASET_SPLIT_FILE)
 
     parser.add_argument(
+        "--subject_proba_file",
+        metavar='',
+        help="File assigning subjects to sampling probability (used for subject_weighted sampler only)",
+        default='')
+
+    parser.add_argument(
         "--event_handler",
         metavar='',
         help="String(s) representing event handler module(s)",

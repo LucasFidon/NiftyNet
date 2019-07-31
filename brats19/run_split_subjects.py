@@ -24,7 +24,8 @@ def split_id_into_HGG_and_LGG(id_list):
     return HGG_list, LGG_list
 
 def split_HGG_and_LGG_into_folds(HGG_list, LGG_list):
-    # make sure HGG and LGG patients are distributed across all folds
+    # Make sure HGG and LGG patients are distributed across all folds.
+    # The splitting is deterministic.
     data_fold = {}  # map patient id -> fold number
     for i in range(len(HGG_list)):
         data_fold[HGG_list[i]] = i % NUMBER_OF_FOLDS
@@ -38,9 +39,11 @@ if __name__ == '__main__':
     HGG_list, LGG_list = split_id_into_HGG_and_LGG(id_list)
     # map patient id -> fold number
     data_fold = split_HGG_and_LGG_into_folds(HGG_list, LGG_list)
+
     # save the csv files for the different folds
     for fold in range(NUMBER_OF_FOLDS):
-        split_csv_path = os.path.join(PREPROCESSED_BRATS_PATH, 'dataset_split_fold%s.csv' % fold)
+        split_csv_path = os.path.join(os.path.dirname(PREPROCESSED_BRATS_PATH),
+                                      'dataset_split_fold%s.csv' % fold)
         with open(split_csv_path, mode='w') as f:
             writer = csv.writer(f, delimiter=',', quotechar='"',
                                 quoting=csv.QUOTE_MINIMAL)
@@ -48,4 +51,31 @@ if __name__ == '__main__':
                 if data_fold[pat_id] == fold:
                     writer.writerow([pat_id, 'validation'])
                 else:
-                    writer.writerow([pat_id, 'inference'])
+                    writer.writerow([pat_id, 'training'])
+        print('the dataset_split_file %s has been created' % split_csv_path)
+
+    # create the csv for the different modalities and the labels
+    for section in ['T1', 'T1c', 'Flair', 'T2', 'Label']:
+        csv_path = os.path.join(os.path.dirname(PREPROCESSED_BRATS_PATH),
+                                      'brats_%s.csv' % section)
+        with open(csv_path, mode='w') as f:
+            writer = csv.writer(f, delimiter=',', quotechar='"',
+                                quoting=csv.QUOTE_MINIMAL)
+            for id in id_list:
+                img_name = '%s%s.nii.gz' % (id, section)
+                img_path = os.path.join(PREPROCESSED_BRATS_PATH, img_name)
+                assert os.path.exists(img_path), 'Cannot find %s' % img_path
+                writer.writerow([id, img_path])
+        print('the data_file %s has been created' % csv_path)
+
+    # create the subject_proba file associated with
+    # the uniform empirical distribution (over training+validation)
+    proba_csv_path = os.path.join(os.path.dirname(PREPROCESSED_BRATS_PATH),
+                                  'subject_proba_0.csv')
+    num_pat = len(id_list)
+    with open(proba_csv_path, mode='w') as f:
+        writer = csv.writer(f, delimiter=',', quotechar='"',
+                            quoting=csv.QUOTE_MINIMAL)
+        for id in id_list:
+            writer.writerow([id, 1./num_pat])
+    print('the initial subject_proba_file %s has been created (uniform distribution)' % proba_csv_path)

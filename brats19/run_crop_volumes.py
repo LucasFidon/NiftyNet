@@ -48,12 +48,13 @@ mod_names15 = ['Flair', 'T1', 'T1c', 'T2']
 
 labels=[1,2,4]
 
-def sup_128(xmin,xmax):
-    
-    if xmax-xmin<128:
-        ecart = int((128-(xmax-xmin))/2)
-        xmax = xmax+ecart+1
-        xmin = xmin-ecart
+def normalize_img_size(xmin, xmax, x_dim):
+    if xmax-xmin < MIN_IMAGE_SIZE:
+        ecart = int((MIN_IMAGE_SIZE - (xmax-xmin))/2)
+        xmin = max(0, xmin - ecart)
+        xmax = min(x_dim, xmin + MIN_IMAGE_SIZE)
+        # xmax = xmax+ecart+1
+        # xmin = xmin-ecart
     return xmin,xmax
            
 
@@ -104,10 +105,41 @@ def crop_zeros(img_array):
         z_min = 0
         z_max = z_dim
 
-    x_min, x_max = sup_128(x_min, x_max)
-    y_min, y_max = sup_128(y_min, y_max)
-    z_min, z_max = sup_128(z_min, z_max)
+    x_min, x_max = normalize_img_size(x_min, x_max, x_dim)
+    y_min, y_max = normalize_img_size(y_min, y_max, y_dim)
+    z_min, z_max = normalize_img_size(z_min, z_max, z_dim)
+
     return x_min, x_max, y_min, y_max, z_min, z_max
+
+
+def pad_volume(vol_array):
+    require_padding = False
+    # pas on both sides with zeros if the minimal size is not reached
+    pad_x = 0
+    if vol_array.shape[0] < MIN_IMAGE_SIZE:
+        pad_x = (MIN_IMAGE_SIZE - vol_array.shape[0]) // 2 + 1
+        require_padding = True
+    pad_y = 0
+    if vol_array.shape[1] < MIN_IMAGE_SIZE:
+        pad_y = (MIN_IMAGE_SIZE - vol_array.shape[1]) // 2 + 1
+        require_padding = True
+    pad_z = 0
+    if vol_array.shape[2] < MIN_IMAGE_SIZE:
+        pad_z = (MIN_IMAGE_SIZE - vol_array.shape[2]) // 2 + 1
+        require_padding = True
+    if require_padding:
+        print('the volume is padded with zero to fulfil the minimum image size')
+        if len(vol_array.shape) == 3:
+            pad_vol = np.pad(vol_array,
+                             ((pad_x, pad_x), (pad_y, pad_y), (pad_z, pad_z)),
+                             'constant')
+        else:
+            pad_vol = np.pad(vol_array,
+                             ((pad_x, pad_x), (pad_y, pad_y), (pad_z, pad_z), (0,0)),
+                             'constant')
+        return pad_vol
+    else:
+        return vol_array
 
 
 def load_scans_BRATS(pat_folder, with_seg=False):
@@ -148,6 +180,8 @@ def save_scans_BRATS(pat_name, img_data, seg_data=None):
 
 
 def main(pat_category_list=('HGG', 'LGG'), crop=False):
+    min_s_ori = 500
+    min_s_crop = 500
     for pat_cat in pat_category_list:
         pat_ID = 0
         for pat_folder_name in os.listdir(os.path.join(BRATS_path, pat_cat)):
@@ -163,18 +197,27 @@ def main(pat_category_list=('HGG', 'LGG'), crop=False):
                 continue
                 pass
             print("subject: {}, shape: {}".format(pat_folder, img_data.shape))
+            for s in list(img_data.shape)[:-1]:
+                if s < min_s_ori:
+                    min_s_ori = s
             # Cropping
             if crop:
                 x_, _x, y_, _y, z_, _z = crop_zeros(img_data)
-                img_data = img_data[x_:_x, y_:_y, z_:_z, :]
-                seg_data = seg_data[x_:_x, y_:_y, z_:_z]
+                img_data = pad_volume(img_data[x_:_x, y_:_y, z_:_z, :])
+                seg_data = pad_volume(seg_data[x_:_x, y_:_y, z_:_z])
                 seg_data = replace_values_seg(seg_data)
                 print('shape cropping: {}'.format(img_data.shape))
+                for s in list(img_data.shape)[:-1]:
+                    if s < min_s_crop:
+                        min_s_crop = s
             # Save with name convention
             pat_name = '%s%d' % (pat_cat, pat_ID)
             # remove '_' from pat_name to match name convention
             pat_name = pat_name.replace('_', '')
             save_scans_BRATS(pat_name, img_data, seg_data)
+            print('')
+            print('min size before cropping: %d' % min_s_ori)
+            print('min size after cropping: %d' % min_s_crop)
 
 
 if __name__ == '__main__':

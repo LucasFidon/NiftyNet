@@ -1,37 +1,17 @@
 import tensorflow as tf
-# from niftynet.application.base_application import BaseApplication
 from niftynet.application.segmentation_application import SegmentationApplication
 from niftynet.engine.application_factory import \
     ApplicationNetFactory, InitializerFactory, OptimiserFactory
 from niftynet.engine.application_variables import \
     CONSOLE, NETWORK_OUTPUT, TF_SUMMARIES
-# from niftynet.engine.sampler_grid_v2 import GridSampler
-# from niftynet.engine.sampler_resize_v2 import ResizeSampler
-# from niftynet.engine.sampler_uniform_v2 import UniformSampler
-# from niftynet.engine.sampler_weighted_v2 import WeightedSampler
-# from niftynet.engine.sampler_balanced_v2 import BalancedSampler
-# from niftynet.engine.windows_aggregator_grid import GridSamplesAggregator
-# from niftynet.engine.windows_aggregator_resize import ResizeSamplesAggregator
-# from niftynet.io.image_reader import ImageReader
-# from niftynet.layer.binary_masking import BinaryMaskingLayer
-# from niftynet.layer.discrete_label_normalisation import \
-#     DiscreteLabelNormalisationLayer
-# from niftynet.layer.histogram_normalisation import \
-#     HistogramNormalisationLayer
 from niftynet.layer.loss_segmentation import LossFunction
-# from niftynet.layer.mean_variance_normalisation import \
-#     MeanVarNormalisationLayer
-# from niftynet.layer.pad import PadLayer
 from niftynet.layer.post_processing import PostProcessingLayer
-# from niftynet.layer.rand_flip import RandomFlipLayer
-# from niftynet.layer.rand_rotation import RandomRotationLayer
-# from niftynet.layer.rand_spatial_scaling import RandomSpatialScalingLayer
-from niftynet.evaluation.segmentation_evaluator import SegmentationEvaluator
-# from niftynet.layer.rand_elastic_deform import RandomElasticDeformationLayer
-import pandas as pd
 from itertools import chain, combinations
+from robust_optimization.subject_weighted_sampler import SubjectWeightedSampler
+from niftynet.engine.sampler_uniform_v2 import UniformSampler
 import random
 import numpy as np
+import csv
 
 
 SUPPORTED_INPUT = set(['image', 'label', 'weight', 'sampler', 'inferred'])
@@ -117,9 +97,9 @@ class VariationalSegmentationApplication(SegmentationApplication):
         self.data_param = None
         self.segmentation_param = None
         self.SUPPORTED_SAMPLING = {
-            'uniform': (self.initialise_uniform_sampler,
-                        self.initialise_grid_sampler,
-                        self.initialise_grid_aggregator),
+            'uniform': (self.initialise_uniform_sampler, # train
+                        self.initialise_grid_sampler, # inference
+                        self.initialise_grid_aggregator), # evaluation?
             'weighted': (self.initialise_weighted_sampler,
                          self.initialise_grid_sampler,
                          self.initialise_grid_aggregator),
@@ -129,7 +109,64 @@ class VariationalSegmentationApplication(SegmentationApplication):
             'balanced': (self.initialise_balanced_sampler,
                          self.initialise_grid_sampler,
                          self.initialise_grid_aggregator),
+            # new sampler for robust ensemble of networks
+            'subject_weighted': (self.initialise_subject_weighted_sampler,
+                                 self.initialise_grid_sampler,
+                                 self.initialise_grid_aggregator),
         }
+        # used for robust optimization
+        self.training_subject_proba = {}
+
+    def initialise_training_subject_proba(self):
+        # load subject proba
+        with open(self.subject_proba_file, mode='r') as f:
+            reader = csv.reader(f)
+            subject_proba = {rows[0]: float(rows[1]) for rows in reader}
+        # load dataset split
+        with open(self.dataset_split_file, mode='r') as f:
+            reader = csv.reader(f)
+            dataset_split = {rows[0]: rows[1] for rows in reader}
+        # we check that all the training subject have a probability
+        # we raise a message and an error otherwise
+        for id in dataset_split.keys():
+            if dataset_split[id] == 'training':
+                try:
+                    self.training_subject_proba[id] = subject_proba[id]
+                except KeyError as e:
+                    print('Probability for subject %s not found in %s' % (id, self.subject_proba_file))
+                    print('Please check your subject_proba_file %s' % self.subject_proba_file)
+                    raise
+        # the proba are renormalised to sum to 1
+        # this is necessary because the subject_proba_file gives the proba of the distribution
+        # over the set of all subjects, not just the training ones
+        sum_training_proba = sum(self.training_subject_proba.values())
+        for id in self.training_subject_proba.keys():
+            self.training_subject_proba[id] /= sum_training_proba
+
+    def initialise_subject_weighted_sampler(self):
+        self.initialise_training_subject_proba()
+        if len(self.training_subject_proba.keys()) <= 0:
+            msg = 'You should specified subject_proba.csv to use subject_weighted_sampler'
+            raise ValueError(msg)
+        self.sampler = [
+            # use subject weighted sampler for the training data
+            [SubjectWeightedSampler(
+            reader=self.readers[0],
+            window_sizes=self.data_param,
+            batch_size=self.net_param.batch_size,
+            windows_per_image=self.action_param.sample_per_volume,
+            queue_length=self.net_param.queue_length)]
+            +
+            # use uniform sampler for the others
+            [UniformSampler(
+            reader=reader,
+            window_sizes=self.data_param,
+            batch_size=self.net_param.batch_size,
+            windows_per_image=self.action_param.sample_per_volume,
+            queue_length=self.net_param.queue_length)
+            for reader in self.readers[1:]]
+        ]
+        self.sampler[0][0].set_subject_proba(self.training_subject_proba)
 
     def set_iteration_update(self, iteration_message):
         """
@@ -169,7 +206,7 @@ class VariationalSegmentationApplication(SegmentationApplication):
         self.var = tf.placeholder_with_default(0, [], 'var')
         self.choices = tf.placeholder_with_default([True, True, True, True], [4], 'choices')
         # choose_all will be used when we want to use all the modalities at all each training iteration
-        self.choose_all = tf.fill([4], True, name='default_choice')
+        # self.choose_all = tf.fill([4], True, name='default_choice')
 
         if self.is_training:
             # if self.action_param.validation_every_n > 0:
@@ -193,7 +230,7 @@ class VariationalSegmentationApplication(SegmentationApplication):
             #                                self.choices, is_training=self.is_training)
             # No missing modalities
             net_img, post_param = self.net({MODALITIES_img[k]: tf.expand_dims(image_unstack[k], -1) for k in range(4)},
-                                           self.choose_all, is_training=self.is_training)
+                                           self.choices, is_training=self.is_training)
 
             net_seg = net_img['seg']
             net_img = tf.concat([net_img[mod] for mod in MODALITIES_img],axis=-1)
@@ -212,6 +249,10 @@ class VariationalSegmentationApplication(SegmentationApplication):
                 n_class=4,
                 loss_type='CrossEntropy')
 
+            focal = LossFunction(
+                n_class=4,
+                loss_type='FocalLoss')
+
             dice = LossFunction(
                 n_class=4,
                 loss_type='Dice',
@@ -219,22 +260,19 @@ class VariationalSegmentationApplication(SegmentationApplication):
 
             wasserstein_dice = LossFunction(
                 n_class=4,
-                loss_type='WGDL'
-            )
-
-            #TODO: try with Focal Loss instead of Cross Entropy
-
+                loss_type='WGDL')
 
             gt =  data_dict['label']
-            loss_cross = cross(prediction=net_seg,ground_truth=gt, weight_map=None)
-            loss_dice = dice(prediction=net_seg,ground_truth=gt)
-            # loss_dice = wasserstein_dice(prediction=net_seg,ground_truth=gt)
+            # loss_cross = cross(prediction=net_seg, ground_truth=gt, weight_map=None)
+            loss_cross = focal(prediction=net_seg, ground_truth=gt, weight_map=None)
+            loss_dice = dice(prediction=net_seg, ground_truth=gt)
+            # loss_dice = wasserstein_dice(prediction=net_seg, ground_truth=gt)
+
             loss_seg = loss_cross + loss_dice
             
             print('output')
             print(net_img)
             loss_reconstruction = tf.reduce_mean(tf.square(net_img - image))
-
 
             print('output_seg')
             print(net_seg)
@@ -293,8 +331,8 @@ class VariationalSegmentationApplication(SegmentationApplication):
             net_img, post_param = self.net(
                 {MODALITIES_img[k]: tf.expand_dims(image[k],-1) for k in range(4)},
                 [True,True,True,True],
-                is_training=self.is_training,
-                is_inference=True)
+                is_training=True,
+                is_inference=False)
 
             net_seg = net_img['seg']
 
@@ -303,25 +341,25 @@ class VariationalSegmentationApplication(SegmentationApplication):
                     'ARGMAX', num_classes=4)
             net_seg = post_process_layer(net_seg)
             outputs_collector.add_to_collection(
-                var=net_img['T1'], name='window',
+                var=net_seg, name='window',
                 average_over_devices=False, collection=NETWORK_OUTPUT)
             outputs_collector.add_to_collection(
                 var=data_dict['image_location'], name='location',
                 average_over_devices=False, collection=NETWORK_OUTPUT)
             self.initialise_aggregator()
 
-    def interpret_output(self, batch_output):
-        if self.is_inference:
-            print(self.var.eval())
-            return self.output_decoder.decode_batch(
-                batch_output['window'], batch_output['location'])
-        return True
-
-    def initialise_evaluator(self, eval_param):
-        self.eval_param = eval_param
-        self.evaluator = SegmentationEvaluator(self.readers[0],
-                                               self.segmentation_param,
-                                               eval_param)
-
-    def add_inferred_output(self, data_param, task_param):
-        return self.add_inferred_output_like(data_param, task_param, 'label')
+    # def interpret_output(self, batch_output):
+    #     if self.is_inference:
+    #         print(self.var.eval())
+    #         return self.output_decoder.decode_batch(
+    #             batch_output['window'], batch_output['location'])
+    #     return True
+    #
+    # def initialise_evaluator(self, eval_param):
+    #     self.eval_param = eval_param
+    #     self.evaluator = SegmentationEvaluator(self.readers[0],
+    #                                            self.segmentation_param,
+    #                                            eval_param)
+    #
+    # def add_inferred_output(self, data_param, task_param):
+    #     return self.add_inferred_output_like(data_param, task_param, 'label')

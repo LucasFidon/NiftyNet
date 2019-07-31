@@ -166,6 +166,13 @@ class ApplicationDriver(object):
         self.app.initialise_dataset_loader(
             data_param, app_param, self.data_partitioner)
 
+        # exposed subject_proba_file and dataset_split_file to the application
+        try:
+            self.app.dataset_split_file = workflow_param['SYSTEM'].dataset_split_file
+            self.app.subject_proba_file = workflow_param['SYSTEM'].subject_proba_file
+        except AttributeError as e:
+            print(e)
+
         # make the list of initialised event handler instances.
         self.load_event_handlers(
             system_param.event_handler or DEFAULT_EVENT_HANDLERS)
