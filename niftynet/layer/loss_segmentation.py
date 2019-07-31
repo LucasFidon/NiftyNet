@@ -17,12 +17,10 @@ from niftynet.layer.base_layer import Layer
 #                    [1., 0.5, 0.7, 0.5, 0.]], dtype=np.float64)
 
 # update of the Tree labels distances for BraTS after they removed the non-enhancing core label (l=3)
-# We also simplified the weights of the tree (they are all taken equal to 0.2 now)
-# we have in order: background (l=0), necrotic core (l=1), edema (l=2), enhancing core (l=4)
 M_tree = np.array([[0.0, 1.0, 1.0, 1.0],
-                   [1.0, 0.0, 0.6, 0.4],
-                   [1.0, 0.6, 0.0, 0.6],
-                   [1.0, 0.4, 0.6, 0.0]], dtype=np.float64)
+                   [1.0, 0.0, 0.6, 0.5],
+                   [1.0, 0.6, 0.0, 0.7],
+                   [1.0, 0.5, 0.7, 0.0]], dtype=np.float64)
 
 
 class LossFunction(Layer):
@@ -473,6 +471,32 @@ def cross_entropy_dense(prediction, ground_truth, weight_map=None):
     entropy = tf.nn.softmax_cross_entropy_with_logits(
         logits=prediction, labels=ground_truth)
     return tf.reduce_mean(entropy)
+
+
+def focal_loss(prediction, ground_truth, weight_map=None, gamma=2):
+    """
+    Function to calculate the Focal loss loss function defined in:
+    "Focal Loss for Dense Object Detection", Tsung-Yi Lin et al ICCV 2017
+
+    :param prediction: the logits (before softmax)
+    :param ground_truth: the segmentation ground truth
+    :param weight_map:
+    :return: the Focal loss
+    """
+    if weight_map is not None:
+        raise NotImplementedError
+
+    prediction_proba = tf.nn.softmax(prediction)
+    one_hot = labels_to_one_hot(ground_truth, tf.shape(prediction)[-1])
+    focal_weight_map = tf.sparse_reduce_sum(one_hot*(1. - prediction_proba), -1)**gamma
+    
+    if len(ground_truth.shape) == len(prediction.shape):
+        ground_truth = ground_truth[..., -1]
+    ground_truth = tf.cast(ground_truth, tf.int32)
+    entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
+        logits=prediction, labels=ground_truth)
+
+    return tf.reduce_mean(focal_weight_map*entropy)
 
 
 def wasserstein_disagreement_map(
