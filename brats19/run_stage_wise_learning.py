@@ -30,12 +30,16 @@ if __name__ == "__main__":
     # total_iter = 600  # for quick test
     init_learning_rate = 0.001
     learning_rate_decay = 0.25
-    n_iter_per_stage = 10000
+    n_iter_per_stage = 15000
     # n_iter_per_stage = 100  # for quick test
+    save_every_n = 1000
+    # save_every_n = 100  # for quick test
 
     # set path of the folder where the checkpoints will be saved
     model_dir = os.path.join(NIFTYNET_PATH, 'models', 'BraTS19', 'u_mvae_%d' % cnn_number)
-    os.mkdir(model_dir)
+    # model_dir = os.path.join(NIFTYNET_PATH, 'models', 'BraTS19', 'u_mvae_wass_focal_long')
+    if not os.path.exists(model_dir):
+        os.mkdir(model_dir)
 
     # set path to csv to used for the splitting training/validation
     data_split_csv = os.path.join(os.path.dirname(PREPROCESSED_BRATS_PATH),
@@ -55,6 +59,7 @@ if __name__ == "__main__":
     stages_start_from_iter = [n_iter_per_stage*i for i in range(n_stages+1)]
     # we set the start_stage number to allow for resuming the training
     start_stage = start_iter // n_iter_per_stage
+    stages_start_from_iter[start_stage] = start_iter
 
     for i in range(start_stage, n_stages):
        print('-----------------------------------')
@@ -67,5 +72,8 @@ if __name__ == "__main__":
        cmd += ' --starting_iter %d' % stages_start_from_iter[i]
        cmd += ' --max_iter %d' % stages_start_from_iter[i+1]
        cmd += ' --lr %f' % learning_rates[i]
+       cmd += ' --subject_proba_file %s' % subject_proba_csv
+       cmd += ' --model_dir %s' % model_dir
+       cmd += ' --save_every_n %d' % save_every_n
        os.system(cmd)
        print('')

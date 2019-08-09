@@ -265,8 +265,8 @@ class VariationalSegmentationApplication(SegmentationApplication):
             gt =  data_dict['label']
             # loss_cross = cross(prediction=net_seg, ground_truth=gt, weight_map=None)
             loss_cross = focal(prediction=net_seg, ground_truth=gt, weight_map=None)
-            loss_dice = dice(prediction=net_seg, ground_truth=gt)
-            # loss_dice = wasserstein_dice(prediction=net_seg, ground_truth=gt)
+            # loss_dice = dice(prediction=net_seg, ground_truth=gt)
+            loss_dice = wasserstein_dice(prediction=net_seg, ground_truth=gt)
 
             loss_seg = loss_cross + loss_dice
             
