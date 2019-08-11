@@ -17,9 +17,12 @@ gt_path = PREPROCESSED_BRATS_PATH + '/{}Label.nii.gz'
 
 def dice_score(gt, pred):
     true_pos = np.float(np.sum(gt * pred ))
-    union = np.float(np.sum(gt) + np.sum(pred)) + 0.00001
-    dice = true_pos * 2.0 / union
-    return dice
+    union = np.float(np.sum(gt) + np.sum(pred))
+    if union == 0:
+        return 1.
+    else:
+        dice = true_pos * 2.0 / union
+        return dice
 
 def total_score(pred_path, gt_path, file_names):
     print(pred_path)
@@ -45,33 +48,25 @@ def total_score(pred_path, gt_path, file_names):
             # compute Dice for the whole tumor
             set_tumor = [1, 2, 3]
             set_tumor_pred = set_tumor
-            image_gt_bin = np.where(np.isin(image_gt, set_tumor_pred)==True, 1, 0)
-            image_pred_bin = np.where(np.isin(image_pred, set_tumor)==True, 1, 0)
-            true_pos = np.float(np.sum(image_gt_bin * image_pred_bin))
-            union = np.float(np.sum(image_gt_bin) + np.sum(image_pred_bin))
-            dice = true_pos * 2.0 / union
+            image_gt_bin = np.where(np.isin(image_gt, set_tumor)==True, 1, 0)
+            image_pred_bin = np.where(np.isin(image_pred, set_tumor_pred)==True, 1, 0)
+            dice = dice_score(image_gt_bin, image_pred_bin)
             score['whole_tumor'].append(dice)
 
             # compute Dice for the core tumor
             set_tumor = [1, 3]
             set_tumor_pred = set_tumor
-            image_gt_bin = np.where(np.isin(image_gt, set_tumor_pred)==True , 1, 0)
-            image_pred_bin = np.where(np.isin(image_pred, set_tumor)==True, 1, 0)
-            true_pos = np.float(np.sum(image_gt_bin * image_pred_bin))
-            union = np.float(np.sum(image_gt_bin) + np.sum(image_pred_bin))
-            dice = true_pos * 2.0 / union
-            # if np.float(np.sum(image_pred_bin))>0:
+            image_gt_bin = np.where(np.isin(image_gt, set_tumor)==True , 1, 0)
+            image_pred_bin = np.where(np.isin(image_pred, set_tumor_pred)==True, 1, 0)
+            dice = dice_score(image_gt_bin, image_pred_bin)
             score['core_tumor'].append(dice)
 
             # compute Dice for the enhancing tumor
             set_tumor = [3]
             set_tumor_pred = set_tumor
-            image_gt_bin = np.where(np.isin(image_gt, set_tumor_pred)==True , 1, 0)
-            image_pred_bin = np.where(np.isin(image_pred, set_tumor)==True, 1, 0)
-            true_pos = np.float(np.sum(image_gt_bin * image_pred_bin))
-            union = np.float(np.sum(image_gt_bin) + np.sum(image_pred_bin))
-            dice = true_pos * 2.0 / union
-            # if np.float(np.sum(image_pred_bin))>0:
+            image_gt_bin = np.where(np.isin(image_gt, set_tumor)==True , 1, 0)
+            image_pred_bin = np.where(np.isin(image_pred, set_tumor_pred)==True, 1, 0)
+            dice = dice_score(image_gt_bin, image_pred_bin)
             score['enhancing_tumor'].append(dice)
 
         except Exception as e:
