@@ -4,7 +4,8 @@ import pandas as pd
 from argparse import ArgumentParser
 from definitions import *
 
-START_FROM_ITER = 40000
+# START_FROM_ITER = 40000
+START_FROM_ITER = 20000
 
 def find_list_of_checkpoints_available(model_dir):
     check_list = []
@@ -60,6 +61,9 @@ def main(model_dir, data_split_file):
         for roi in ['whole_tumor', 'core_tumor', 'enhancing_tumor']:
             mean_dice += np.mean(scores[roi]) / 3.
         if mean_dice > best_mean_dice:
+            print('###################################################')
+            print('--- New best checkpoint! (iter %d, mead DSC=%f) ---' % (ckpt, mean_dice))
+            print('###################################################')
             best_cpkt = ckpt
             best_mean_dice = mean_dice
             best_scores = scores
@@ -93,11 +97,17 @@ def main(model_dir, data_split_file):
     os.system(cmd)
 
     print('')
-    print('the best model corresponds to iteration %d (mean dice=%f)' % (best_cpkt, best_mean_dice))
-    for label in ['whole_tumor', 'core_tumor', 'enhancing_tumor']:
-        print('label: {}, (validation) Dice mean: {}+/-{}'.format(label,
+    best_model_path = os.path.join(model_dir, 'best_model.txt')
+    with open(best_model_path, 'w') as f:
+        line = 'the best model corresponds to iteration %d (mean dice=%f)' % (best_cpkt, best_mean_dice)
+        print(line)
+        f.write(line + '\n')
+        for label in ['whole_tumor', 'core_tumor', 'enhancing_tumor']:
+            line = 'label: {}, (validation) Dice mean: {}+/-{}'.format(label,
                                                      round(100*np.mean(best_scores[label]), 1),
-                                                     round(100*np.std(best_scores[label]), 1)))
+                                                     round(100*np.std(best_scores[label]), 1))
+            print(line)
+            f.write(line + '\n')
     print('')
 
 

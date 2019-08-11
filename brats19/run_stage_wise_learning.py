@@ -27,13 +27,13 @@ if __name__ == "__main__":
     cnn_number = int(args.cnn)  # number of already trained CNNs for the robust ensemble
     start_iter = int(args.start_iter)
     total_iter = 60000
-    # total_iter = 600  # for quick test
+    # total_iter = 20  # for quick test
     init_learning_rate = 0.001
     learning_rate_decay = 0.25
     n_iter_per_stage = 15000
-    # n_iter_per_stage = 100  # for quick test
+    # n_iter_per_stage = 10  # for quick test
     save_every_n = 1000
-    # save_every_n = 100  # for quick test
+    # save_every_n = 10  # for quick test
 
     # set path of the folder where the checkpoints will be saved
     model_dir = os.path.join(NIFTYNET_PATH, 'models', 'BraTS19', 'u_mvae_%d' % cnn_number)

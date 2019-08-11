@@ -53,8 +53,6 @@ class SubjectWeightedSampler(UniformSampler):
         assert len(new_proba) == self.reader.num_subjects
         for idx in range(self.reader.num_subjects):
             pat_name = self.reader.get_subject(idx)['subject_id']
-            # import pdb
-            # pdb.set_trace()
             self.subject_proba.append(new_proba[pat_name])
 
     # pylint: disable=too-many-locals
@@ -77,6 +75,8 @@ class SubjectWeightedSampler(UniformSampler):
             ``{image_modality: data_array, image_location: n_samples * 7}``
         """
         idx = np.random.choice(range(len(self.subject_proba)), 1, p=self.subject_proba)[0]
+        # pat_name = self.reader.get_subject(idx)['subject_id']
+        # print("Sample window from patient %s" % pat_name)
         image_id, data, _ = self.reader(idx=idx, shuffle=True)
         image_shapes = dict(
             (name, data[name].shape) for name in self.window.names)
@@ -129,5 +129,3 @@ class SubjectWeightedSampler(UniformSampler):
         # [enqueue_batch_size, x, y, z, time, modality]
         # where enqueue_batch_size = windows_per_image
         return output_dict
-
-
