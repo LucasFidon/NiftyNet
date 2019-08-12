@@ -75,5 +75,6 @@ if __name__ == "__main__":
        cmd += ' --subject_proba_file %s' % subject_proba_csv
        cmd += ' --model_dir %s' % model_dir
        cmd += ' --save_every_n %d' % save_every_n
+       cmd += ' --dataset_split_file %s' % data_split_csv
        os.system(cmd)
        print('')
