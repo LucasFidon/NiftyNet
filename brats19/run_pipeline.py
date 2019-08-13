@@ -34,7 +34,8 @@ def compute_proba_from_score(t):
             subject_x[pat_id] = 0
             for i in range(t):
                 for roi in ['whole_tumor', 'core_tumor', 'enhancing_tumor']:
-                    subject_x[pat_id] += scores_previous_cnn[i][roi][scores_previous_cnn[i]['subject_id']==pat_id].values[0]
+                    # we want to MINIMIZE the mean dice
+                    subject_x[pat_id] -= scores_previous_cnn[i][roi][scores_previous_cnn[i]['subject_id']==pat_id].values[0]
         # compute the softmax with:
         # e ^ (x - max(x)) / sum(e^(x - max(x))
         # max(x) is substracted for numerical stabilities
