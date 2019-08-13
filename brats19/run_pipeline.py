@@ -13,7 +13,7 @@ NUM_SUBJECT_BRATS19 = 335
 def compute_proba_from_score(t):
     model_path = os.path.join(SCORE_CSV_BASE, 'u_mvae_%d' % t)
     if not os.path.exists(model_path):
-        os.makedir(model_path)
+        os.mkdir(model_path)
     proba_csv_path = os.path.join(model_path, 'subject_proba_%d.csv' % t)
     if t == 0:
         uniform_proba_path = os.path.join(os.path.dirname(PREPROCESSED_BRATS_PATH),
