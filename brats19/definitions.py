@@ -7,8 +7,12 @@ ROOT_FOLDER = '/'
 NIFTYNET_PATH = os.path.join(ROOT_FOLDER, 'workspace', 'NiftyNet')
 ORIGINAL_BRATS_PATH = os.path.join(
     ROOT_FOLDER, 'data', 'BraTS2019', 'MICCAI_BraTS_2019_Data_Training')
+ORIGINAL_VALIDATION_BRATS_PATH = os.path.join(
+    ROOT_FOLDER, 'data', 'BraTS2019', 'MICCAI_BraTS_2019_Data_Validation')
 PREPROCESSED_BRATS_PATH = os.path.join(
     ROOT_FOLDER, 'data', 'BraTS2019', 'MICCAI_BraTS_2019_Data_Training_crop')
+PREPROCESSED_VALIDATION_BRATS_PATH = os.path.join(
+    ROOT_FOLDER, 'data', 'BraTS2019', 'MICCAI_BraTS_2019_Data_Validation_crop')
 
 # HYPERPARAMETERS
 MODALITY_NAMES = ['Flair', 'T1', 'T1c', 'T2']

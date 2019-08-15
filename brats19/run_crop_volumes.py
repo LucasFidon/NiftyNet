@@ -21,20 +21,17 @@ Please change BRATS_path and OUTPUT_path accordingly to the preferred folder
 """
 import os
 
-import SimpleITK as sitk
 import nibabel
 import numpy as np
+from argparse import ArgumentParser
+import csv
 from definitions import *
 
-# change here to the directory of downloaded BRATS data')
-# BRATS_path = os.path.join(
-#     os.environ['HOME'],'data', 'BraTS2019', 'MICCAI_BraTS_2019_Data_Training')
 BRATS_path = ORIGINAL_BRATS_PATH
+VALIDATION_BRATS_path = ORIGINAL_VALIDATION_BRATS_PATH
 
-# change here to the directory of preferred output directory')
-# OUTPUT_path = os.path.join(
-#     os.environ['HOME'],'data', 'BraTS2019', 'MICCAI_BraTS_2019_Data_Training_crop')
 OUTPUT_path = PREPROCESSED_BRATS_PATH
+# VALIDATION_OUTPUT_path = PREPROCESSED_VALIDATION_BRATS_PATH
 
 # Aff to use with BRATS dataset
 OUTPUT_AFFINE = np.array(
@@ -53,8 +50,6 @@ def normalize_img_size(xmin, xmax, x_dim):
         ecart = int((MIN_IMAGE_SIZE - (xmax-xmin))/2)
         xmin = max(0, xmin - ecart)
         xmax = min(x_dim, xmin + MIN_IMAGE_SIZE)
-        # xmax = xmax+ecart+1
-        # xmin = xmin-ecart
     return xmin,xmax
            
 
@@ -161,7 +156,6 @@ def load_scans_BRATS(pat_folder, with_seg=False):
 
 
 def save_scans_BRATS(pat_name, img_data, seg_data=None):
-    # save_mod_names = ['Flair', 'T1', 'T1c', 'T2']
     save_mod_names = MODALITY_NAMES
     save_seg_name = 'Label'
     assert img_data.shape[3] == 4
@@ -180,7 +174,7 @@ def save_scans_BRATS(pat_name, img_data, seg_data=None):
 
 
 def main(pat_category_list=('HGG', 'LGG'), crop=False):
-    min_s_ori = 500
+    min_s_ori = 500  # keep track of the minimum shape dim for logs (before and after cropping)
     min_s_crop = 500
     for pat_cat in pat_category_list:
         pat_ID = 0
@@ -215,18 +209,94 @@ def main(pat_category_list=('HGG', 'LGG'), crop=False):
             # remove '_' from pat_name to match name convention
             pat_name = pat_name.replace('_', '')
             save_scans_BRATS(pat_name, img_data, seg_data)
-            print('')
-            print('min size before cropping: %d' % min_s_ori)
-            print('min size after cropping: %d' % min_s_crop)
+    print('')
+    print('min size before cropping: %d' % min_s_ori)
+    print('min size after cropping: %d' % min_s_crop)
+
+
+def main_validation(crop=True):
+    min_s_ori = 500  # keep track of the minimum shape dim for logs (before and after cropping)
+    min_s_crop = 500
+    pat_ID_list = []
+    for pat_folder_name in os.listdir(VALIDATION_BRATS_path):
+        pat_ID = pat_folder_name
+        # Load
+        pat_folder = os.path.join(VALIDATION_BRATS_path, pat_folder_name)
+        try:
+            print(pat_folder)
+            img_data, _ = load_scans_BRATS(pat_folder, with_seg=False)
+            pat_ID_list.append(pat_ID)
+        except OSError:
+            print('skipping %s' % pat_folder)
+            continue
+            pass
+        print("subject: {}, shape: {}".format(pat_folder, img_data.shape))
+        for s in list(img_data.shape)[:-1]:
+            if s < min_s_ori:
+                min_s_ori = s
+        # Cropping
+        if crop:
+            x_, _x, y_, _y, z_, _z = crop_zeros(img_data)
+            img_data = pad_volume(img_data[x_:_x, y_:_y, z_:_z, :])
+            print('shape cropping: {}'.format(img_data.shape))
+            for s in list(img_data.shape)[:-1]:
+                if s < min_s_crop:
+                    min_s_crop = s
+        # Save with name convention
+        pat_name = pat_ID
+        save_scans_BRATS(pat_name, img_data)
+    print('')
+    print('min size before cropping: %d' % min_s_ori)
+    print('min size after cropping: %d' % min_s_crop)
+    print('')
+    # Save the CSV files for the different modalities and the data split
+    split_csv_path = os.path.join(os.path.dirname(OUTPUT_path),
+                                  'dataset_split_valid.csv')
+    with open(split_csv_path, mode='w') as f:
+        writer = csv.writer(f, delimiter=',', quotechar='"',
+                            quoting=csv.QUOTE_MINIMAL)
+        for pat_id in pat_ID_list:
+            writer.writerow([pat_id, 'inference'])
+    print('the dataset_split_file %s has been created' % split_csv_path)
+    # create the csv for the different modalities and the labels
+    for section in ['T1', 'T1c', 'Flair', 'T2']:
+        csv_path = os.path.join(os.path.dirname(OUTPUT_path),
+                                'brats_%s_valid.csv' % section)
+        with open(csv_path, mode='w') as f:
+            writer = csv.writer(f, delimiter=',', quotechar='"',
+                                quoting=csv.QUOTE_MINIMAL)
+            for id in pat_ID_list:
+                img_name = '%s_%s.nii.gz' % (id, section)
+                img_path = os.path.join(OUTPUT_path, img_name)
+                assert os.path.exists(img_path), 'Cannot find %s' % img_path
+                writer.writerow([id, img_path])
+        print('the data_file %s has been created' % csv_path)
 
 
 if __name__ == '__main__':
-    if not os.path.exists(BRATS_path):
-        raise ValueError(
-            'please change "BRATS_path" in this script to '
-            'the BRATS17 challenge dataset. '
-            'Dataset not found: {}'.format(BRATS_path))
-    if not os.path.exists(OUTPUT_path):
-        os.makedirs(OUTPUT_path)
-    main(crop=True)
-    # main(['HGG'], dataset='BRATS15', crop=False)
+    parser = ArgumentParser()
+    parser.add_argument('--data', default='train')
+    args = parser.parse_args()
+    dataset = args.data
+    if dataset == 'train':
+        print("Preprocess training data")
+        if not os.path.exists(BRATS_path):
+            raise ValueError(
+                'please change "BRATS_path" in this script to '
+                'the BRATS19 challenge dataset. '
+                'Dataset not found: {}'.format(BRATS_path))
+        if not os.path.exists(OUTPUT_path):
+            os.makedirs(OUTPUT_path)
+        main(crop=True)
+    else:
+        print("Preprocess validation data")
+        if not os.path.exists(VALIDATION_BRATS_path):
+            raise ValueError(
+                'please change "BRATS_path" in this script to '
+                'the BRATS19 challenge dataset. '
+                'Dataset not found: {}'.format(VALIDATION_BRATS_path))
+        # change output folder path
+        OUTPUT_path = PREPROCESSED_VALIDATION_BRATS_PATH
+        if not os.path.exists(OUTPUT_path):
+            os.makedirs(OUTPUT_path)
+        main_validation(crop=True)

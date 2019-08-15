@@ -337,8 +337,12 @@ class VariationalSegmentationApplication(SegmentationApplication):
             net_seg = net_img['seg']
 
             print('output')
-            post_process_layer = PostProcessingLayer(
-                    'ARGMAX', num_classes=4)
+            if not self.segmentation_param.output_prob:
+                post_process_layer = PostProcessingLayer(
+                        'ARGMAX', num_classes=4)
+            else:
+                post_process_layer = PostProcessingLayer(
+                        'SOFTMAX', num_classes=4)
             net_seg = post_process_layer(net_seg)
             outputs_collector.add_to_collection(
                 var=net_seg, name='window',
