@@ -310,7 +310,7 @@ class VariationalSegmentationApplication(SegmentationApplication):
                 collection=TF_SUMMARIES)
             outputs_collector.add_to_collection(
                 var=KLD, name='KLD',
-                average_over_devices=False, collection=CONSOLE)   
+                average_over_devices=False, collection=CONSOLE)
             outputs_collector.add_to_collection(
                 var=loss_reconstruction, name='loss_reconstruction',
                 average_over_devices=False, collection=CONSOLE)

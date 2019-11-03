@@ -10,6 +10,8 @@ def get_all_patient_id(pat_folder):
             id = '%s_' % (file_name.split('_'))[0]
             if not id in id_list:
                 id_list.append(id)
+    # the list of ids is sorted to make the split deterministic
+    id_list.sort()
     return id_list
 
 def split_id_into_HGG_and_LGG(id_list):

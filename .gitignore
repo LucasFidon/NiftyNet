@@ -30,4 +30,5 @@ doc/source/modules.rst
 .ipynb_checkpoints
 demos/unet/run_U373.sh
 demos/unet/run_hela.sh
+models_JADE/
 
